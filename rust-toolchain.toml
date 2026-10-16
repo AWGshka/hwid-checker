@@ -1,0 +1,5 @@
+# Build with the MinGW toolchain, so no Visual Studio Build Tools are needed
+# (needs gcc from MinGW-w64 on PATH). Delete this file to use MSVC instead.
+[toolchain]
+channel = "stable-x86_64-pc-windows-gnu"
+profile = "minimal"

@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # rust-toolchain.toml pins a host-specific toolchain, which rustup won't
+      # auto-install from the file; install it by name instead.
+      - name: Install Rust
+        run: rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: hwid_checker-${{ github.sha }}
+          path: target/release/hwid_checker.exe
+          if-no-files-found: error
+
+      # Rolling "latest" release on main: recreated on every build so it
+      # always holds the exe of the newest commit.
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest target/release/hwid_checker.exe \
+            --target "$GITHUB_SHA" \
+            --title "Latest build" \
+            --notes "Built from ${GITHUB_SHA::7} on $(date -u '+%Y-%m-%d %H:%M UTC')." \
+            --latest
